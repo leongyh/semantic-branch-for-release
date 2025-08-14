@@ -15,7 +15,7 @@ import { SemanticVersion, releaseTypeFromCommitMessages } from './semantic-versi
 import { generateReleaseBranchName, isReleaseBranch } from './utils.ts'
 import { RELEASE_TYPES, SIMPLE_GIT_CONFIG } from './constants.ts'
 
-export async function run(gitObj: SimpleGit = undefined): Promise<void> {
+export async function run(gitObj: SimpleGit | undefined = undefined): Promise<void> {
   const action: string = core.getInput('action')
   const trunkBranchName: string = core.getInput('trunk-branch-name')
   const releaseBranchRegex: RegExp = new RegExp(core.getInput('release-branch-pattern'))

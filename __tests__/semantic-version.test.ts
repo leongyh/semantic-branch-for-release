@@ -10,9 +10,7 @@ describe('SemanticVersion class', () => {
   })
 
   it('should throw an error for invalid semantic version', () => {
-    expect(() => new SemanticVersion('invalid.version')).toThrow(
-      'Invalid semantic version format: invalid.version'
-    )
+    expect(() => new SemanticVersion('invalid.version')).toThrow(`Invalid semantic version format: invalid.version`)
   })
 
   it('should bump major version', () => {

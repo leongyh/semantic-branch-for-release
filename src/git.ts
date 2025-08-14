@@ -1,6 +1,6 @@
 import('process')
 import { SimpleGit } from 'simple-git'
-import { SemanticVersion } from './semantic-version'
+import { SemanticVersion } from './semantic-version.ts'
 
 /**
  * Get all tags reachable from a given branch. Tags are sorted by the semantic versioning spec.

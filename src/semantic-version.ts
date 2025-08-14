@@ -1,5 +1,5 @@
-import { parseReleaseTypeFromCommitMessage } from './utils'
-import { RELEASE_TYPES, SEMANTIC_VERSION_REGEX } from './constants'
+import { parseReleaseTypeFromCommitMessage } from './utils.ts'
+import { RELEASE_TYPES, SEMANTIC_VERSION_REGEX } from './constants.ts'
 
 export class SemanticVersion {
   major: number
@@ -68,7 +68,7 @@ export class SemanticVersion {
 }
 
 export function releaseTypeFromCommitMessages(commitMessages: string[]): RELEASE_TYPES {
-  let bumpType = RELEASE_TYPES.NONE
+  let bumpType: RELEASE_TYPES = RELEASE_TYPES.NONE
 
   for (const message of commitMessages) {
     const releaseType = parseReleaseTypeFromCommitMessage(message)
@@ -78,11 +78,7 @@ export function releaseTypeFromCommitMessages(commitMessages: string[]): RELEASE
       break // Major release takes precedence
     } else if (releaseType === RELEASE_TYPES.MINOR && bumpType !== RELEASE_TYPES.MAJOR) {
       bumpType = RELEASE_TYPES.MINOR
-    } else if (
-      releaseType === RELEASE_TYPES.PATCH &&
-      bumpType !== RELEASE_TYPES.MAJOR &&
-      bumpType !== RELEASE_TYPES.MINOR
-    ) {
+    } else if (releaseType === RELEASE_TYPES.PATCH && bumpType !== RELEASE_TYPES.MAJOR && bumpType !== RELEASE_TYPES.MINOR) {
       bumpType = RELEASE_TYPES.PATCH
     }
   }

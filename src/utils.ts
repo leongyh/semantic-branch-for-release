@@ -1,5 +1,5 @@
-import { RELEASE_TYPES, CONVENTIONAL_COMMIT_REGEX } from './constants'
-import { SemanticVersion } from './semantic-version'
+import { RELEASE_TYPES, CONVENTIONAL_COMMIT_REGEX } from './constants.ts'
+import { SemanticVersion } from './semantic-version.ts'
 
 /**
  * Parses semantic release type from a valid conventional commit message to a semantic version release type.
