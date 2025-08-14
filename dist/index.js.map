@@ -1,0 +1,1 @@
+{"version":3,"file":"index.js","sources":["../src/index.ts"],"sourcesContent":["async function run(): Promise<void> {}\n\nrun()\n"],"names":[],"mappings":"AAAA,eAAe,GAAG,GAAA,EAAmB;AAErC,GAAG,EAAE"}

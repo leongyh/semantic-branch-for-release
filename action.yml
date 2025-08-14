@@ -1,0 +1,47 @@
+name: Semantic Branch For Release
+description: Semantic release for Branch For Release Trunk-based repositories.
+author: Hung Leong
+
+# Add your action's branding here. This will appear on the GitHub Marketplace.
+branding:
+  icon: heart
+  color: red
+
+# Define your inputs here.
+inputs:
+  action:
+    description: The action to perform, e.g., 'release-cut' or 'release'
+    required: true
+  trunk-branch-name:
+    description: The name of the trunk branch (default is 'main')
+    required: false
+    default: main
+  release-branch-pattern:
+    description:
+      The ECMAScript Regex pattern for identifying release branches. Make sure it matches the template 'release-branch-template' (default is
+      '^release-(0|[1-9]\d*)\.(0|[1-9]\d*)\.x$')
+    required: false
+    default: ^release-(0|[1-9]\d*)\.(0|[1-9]\d*)\.x$
+  release-branch-template:
+    description:
+      The template string for creating release branches. Accessible variables are major, minor, patch, prerelease. Make sure it matches the regex
+      'release-branch-pattern' (default is 'release-{{major}}.{{minor}}.x')
+    required: false
+    default: release-${major}.${minor}.x
+  dry-run:
+    description: Whether to perform a dry run. Dry runs wont push git changes (default is 'false')
+    required: false
+    default: 'false'
+
+# Define your outputs here.
+outputs:
+  next-version:
+    description: The next version to be released, e.g., '1.2.3'
+  previous-version:
+    description: The previous version before the next release, e.g., '1.2.2'
+  previous-stable-version:
+    description: The previous stable version before the next release, e.g., '1.2.2'
+
+runs:
+  using: node20
+  main: dist/index.js
