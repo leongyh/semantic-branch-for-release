@@ -131,48 +131,48 @@ describe('Test release action', () => {
     await git.commit('Initial commit', { '--allow-empty': null })
     await git.tag(['v1.0.0'])
 
-    await git.commit('Update to v1.1.0-rc.1', {
+    await git.commit('feat: Update to v1.1.0-rc.1', {
       '--allow-empty': null
     })
     await git.tag(['v1.1.0-rc.1'])
 
     await git.checkout(['-b', 'release-1.1.x'])
-    await git.commit('Update to v1.1.0-rc.2', {
+    await git.commit('fix: Update to v1.1.0-rc.2', {
       '--allow-empty': null
     })
     await git.tag(['v1.1.0-rc.2'])
     await git.tag(['v1.1.0'])
 
-    await git.commit('Some changes in release branch', {
+    await git.commit('fix: Some changes in release branch', {
       '--allow-empty': null
     })
     await git.tag(['v1.1.1-rc.1'])
 
     await git.checkout('main')
-    await git.commit('Update to v1.2.0-rc.1', {
+    await git.commit('feat: Update to v1.2.0-rc.1', {
       '--allow-empty': null
     })
     await git.tag(['v1.2.0-rc.1'])
 
     await git.checkout(['-b', 'release-1.2.x'])
-    await git.commit('Update to v1.2.0-rc.2', {
+    await git.commit('fix: Update to v1.2.0-rc.2', {
       '--allow-empty': null
     })
     await git.tag(['v1.2.0-rc.2'])
 
-    await git.commit('Update to v1.2.0-rc.3', {
+    await git.commit('fix: Update to v1.2.0-rc.3', {
       '--allow-empty': null
     })
     await git.tag(['v1.2.0-rc.3'])
     await git.tag(['v1.2.0'])
 
     await git.checkout('main')
-    await git.commit('Update to v1.3.0-rc.1', {
+    await git.commit('feat: Update to v1.3.0-rc.1', {
       '--allow-empty': null
     })
     await git.tag(['v1.3.0-rc.1'])
 
-    git.checkout('release-1.1.x')
+    await git.checkout('release-1.1.x')
 
     await run(git)
 
@@ -534,6 +534,28 @@ describe('Test release-cut action', () => {
       '--allow-empty': null
     })
     await git.tag(['some-tag-2'])
+
+    await run(git)
+
+    const tags = await git.tags({ '--points-at': 'HEAD' })
+    const currentBranch = await git.branch()
+
+    expect(tags.all.includes('v1.1.0-rc.1')).toBe(true)
+    expect(currentBranch.current).toBe('release-1.1.x')
+  })
+
+  test('make release cut with some non-conventional commits', async () => {
+    const git: SimpleGit = simpleGit(dir, SIMPLE_GIT_CONFIG)
+
+    await git.commit('Initial commit', { '--allow-empty': null })
+    await git.tag(['v1.0.0-rc.1'])
+
+    await git.commit('not a conventional commit message: hello', {
+      '--allow-empty': null
+    })
+    await git.commit('feat(my-scope): world', {
+      '--allow-empty': null
+    })
 
     await run(git)
 

@@ -342,6 +342,39 @@ describe('Get Latest Stable Tag', () => {
     expect(latestStableTag).toBe('v1.0.1')
   })
 
+  it('should return latest stable tag reachable from older branch', async () => {
+    /*
+     *      / v1.0.0-rc.2, v1.0.0 -> v1.0.1-rc.1 (release-1.0.x)
+     * v1.0.0-rc.1 -> v1.1.0-rc.1 (main)
+     *                    \-> v1.1.0-rc.2, v1.1.0 (release-1.1.x)
+     */
+    const git: SimpleGit = simpleGit(dir, SIMPLE_GIT_CONFIG)
+
+    await git.commit('Initial commit', { '--allow-empty': null })
+    await git.tag(['v1.0.0-rc.1'])
+
+    await git.checkoutBranch('release-1.0.x', 'main')
+    await git.commit('Release v1.0.0-rc.2', { '--allow-empty': null })
+    await git.tag(['v1.0.0-rc.2'])
+    await git.tag(['v1.0.0'])
+
+    await git.commit('v1.0.1-rc.1', { '--allow-empty': null })
+    await git.tag(['v1.0.1-rc.1'])
+
+    await git.checkout('main')
+    await git.commit('Update to v1.1.0-rc.1', {
+      '--allow-empty': null
+    })
+
+    await git.checkoutBranch('release-1.1.x', 'main')
+    await git.commit('Release v1.1.0-rc.2', { '--allow-empty': null })
+    await git.tag(['v1.1.0-rc.2'])
+    await git.tag(['v1.1.0'])
+
+    const latestStableTag = await getLatestStableTag(git, 'release-1.0.x')
+    expect(latestStableTag).toBe('v1.0.0')
+  })
+
   it('should return empty string if no stable tags', async () => {
     const git: SimpleGit = simpleGit(dir, SIMPLE_GIT_CONFIG)
 

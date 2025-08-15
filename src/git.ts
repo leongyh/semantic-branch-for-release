@@ -32,11 +32,17 @@ export async function getLatestTag(git: SimpleGit, ref: string): Promise<string>
  * Get the latest stable (non-prerelease) semantic versioned tag reachable from a given branch. The latest tag is the one with the highest semantic version.
  *
  * @param {SimpleGit} git - An instance of SimpleGit to interact with the Git repository.
+ * @param {string} ref - The ref to get the latest stable tag from.
  *
  * @return {Promise<string>} - A promise that resolves to the latest stable tag name, or an empty string if no stable tags are found.
  */
-export async function getLatestStableTag(git: SimpleGit): Promise<string> {
-  const tags = (await git.tags({ '--sort': 'v:refname' })).all.filter((tag: string) => {
+export async function getLatestStableTag(git: SimpleGit, ref: string): Promise<string> {
+  const tags = (
+    await git.tags({
+      '--merged': ref,
+      '--sort': 'v:refname'
+    })
+  ).all.filter((tag: string) => {
     try {
       return !new SemanticVersion(tag).isPrerelease()
     } catch {
@@ -128,6 +134,13 @@ export async function makeRelease(git: SimpleGit, targetTag: string, releaseTag:
   await git.tag([releaseTag])
 }
 
+/**
+ * Push all branches and tags to the remote repository using a token for authentication.
+ *
+ * @param {SimpleGit} git - An instance of SimpleGit to interact with the Git repository.
+ *
+ * @return {Promise<void>} - A promise that resolves when the push is complete.
+ */
 export async function gitSync(git: SimpleGit): Promise<void> {
   const repo: string = process.env.GITHUB_SERVER_URL.replace(/^https?\:\/\//i, '') + '/' + process.env.GITHUB_REPOSITORY
   const remote: string = `https://x-access-token:${process.env.GH_TOKEN}@${repo}`

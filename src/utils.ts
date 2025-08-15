@@ -1,3 +1,5 @@
+import * as core from '@actions/core'
+
 import { RELEASE_TYPES, CONVENTIONAL_COMMIT_REGEX } from './constants.ts'
 import { SemanticVersion } from './semantic-version.ts'
 
@@ -13,7 +15,8 @@ export function parseReleaseTypeFromCommitMessage(message: string): string | Err
   let releaseType: string = RELEASE_TYPES.NONE
 
   if (!m) {
-    throw new Error(`Invalid commit message format: ${message}`)
+    core.warning(`Detected commit message that does not conform to Conventional Commits: ${message}`)
+    return RELEASE_TYPES.NONE
   }
 
   // Parse capture group 1: Type

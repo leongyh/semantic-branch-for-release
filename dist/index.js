@@ -33190,7 +33190,8 @@ function parseReleaseTypeFromCommitMessage(message) {
     const m = message.match(CONVENTIONAL_COMMIT_REGEX);
     let releaseType = RELEASE_TYPES.NONE;
     if (!m) {
-        throw new Error(`Invalid commit message format: ${message}`);
+        coreExports.warning(`Detected commit message that does not conform to Conventional Commits: ${message}`);
+        return RELEASE_TYPES.NONE;
     }
     // Parse capture group 1: Type
     if (m[1] === 'feat') {
@@ -33327,11 +33328,15 @@ async function getLatestTag(git, ref) {
  * Get the latest stable (non-prerelease) semantic versioned tag reachable from a given branch. The latest tag is the one with the highest semantic version.
  *
  * @param {SimpleGit} git - An instance of SimpleGit to interact with the Git repository.
+ * @param {string} ref - The ref to get the latest stable tag from.
  *
  * @return {Promise<string>} - A promise that resolves to the latest stable tag name, or an empty string if no stable tags are found.
  */
-async function getLatestStableTag(git) {
-    const tags = (await git.tags({ '--sort': 'v:refname' })).all.filter((tag) => {
+async function getLatestStableTag(git, ref) {
+    const tags = (await git.tags({
+        '--merged': ref,
+        '--sort': 'v:refname'
+    })).all.filter((tag) => {
         try {
             return !new SemanticVersion(tag).isPrerelease();
         }
@@ -33411,6 +33416,13 @@ async function makeRelease(git, targetTag, releaseTag) {
     await git.checkout(targetTag);
     await git.tag([releaseTag]);
 }
+/**
+ * Push all branches and tags to the remote repository using a token for authentication.
+ *
+ * @param {SimpleGit} git - An instance of SimpleGit to interact with the Git repository.
+ *
+ * @return {Promise<void>} - A promise that resolves when the push is complete.
+ */
 async function gitSync(git) {
     const repo = process.env.GITHUB_SERVER_URL.replace(/^https?\:\/\//i, '') + '/' + process.env.GITHUB_REPOSITORY;
     const remote = `https://x-access-token:${process.env.GH_TOKEN}@${repo}`;
@@ -33492,7 +33504,7 @@ async function run(gitObj = undefined) {
         });
         const version = new SemanticVersion(targetTag[0]);
         previousVersion = version.toString();
-        previousStableVersion = await getLatestStableTag(git);
+        previousStableVersion = await getLatestStableTag(git, currentBranch);
         version.makeRelease();
         await makeRelease(git, targetTag[0], version.toString());
         nextVersion = version.toString();

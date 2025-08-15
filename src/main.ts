@@ -102,7 +102,7 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
 
     const version: SemanticVersion = new SemanticVersion(targetTag[0])
     previousVersion = version.toString()
-    previousStableVersion = await getLatestStableTag(git)
+    previousStableVersion = await getLatestStableTag(git, currentBranch)
 
     version.makeRelease()
 

@@ -32,17 +32,17 @@ describe('Parse Release Type From Valid Commit Message', () => {
 describe('Parse Release Type From Invalid Commit Message', () => {
   it('should throw an error for invalid format', () => {
     const message = 'invalid commit message format'
-    expect(() => parseReleaseTypeFromCommitMessage(message)).toThrow('Invalid commit message format: invalid commit message format')
+    expect(parseReleaseTypeFromCommitMessage(message)).toBe('none')
   })
 
   it('should throw an error for empty message', () => {
     const message = ''
-    expect(() => parseReleaseTypeFromCommitMessage(message)).toThrow('Invalid commit message format: ')
+    expect(parseReleaseTypeFromCommitMessage(message)).toBe('none')
   })
 
   it('should throw an error for missing type', () => {
     const message = ': add new feature'
-    expect(() => parseReleaseTypeFromCommitMessage(message)).toThrow('Invalid commit message format: : add new feature')
+    expect(parseReleaseTypeFromCommitMessage(message)).toBe('none')
   })
 })
 
