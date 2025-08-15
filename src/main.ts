@@ -20,7 +20,7 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
   const trunkBranchName: string = core.getInput('trunk-branch-name')
   const releaseBranchRegex: RegExp = new RegExp(core.getInput('release-branch-pattern'))
   const releaseBranchStringTemplate: string = core.getInput('release-branch-template')
-  const dryRun: boolean = Boolean(core.getInput('dry-run'))
+  const dryRun: boolean = core.getInput('dry-run') === 'true'
 
   // Validate supported action input
   if (!['release', 'release-cut'].includes(action)) {

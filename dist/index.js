@@ -33435,7 +33435,7 @@ async function run(gitObj = undefined) {
     const trunkBranchName = coreExports.getInput('trunk-branch-name');
     const releaseBranchRegex = new RegExp(coreExports.getInput('release-branch-pattern'));
     const releaseBranchStringTemplate = coreExports.getInput('release-branch-template');
-    const dryRun = Boolean(coreExports.getInput('dry-run'));
+    const dryRun = coreExports.getInput('dry-run') === 'true';
     // Validate supported action input
     if (!['release', 'release-cut'].includes(action)) {
         throw new Error(`Not supported action: ${action}`);
