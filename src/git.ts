@@ -1,5 +1,7 @@
 import('process')
+import * as core from '@actions/core'
 import { SimpleGit } from 'simple-git'
+
 import { SemanticVersion } from './semantic-version.ts'
 
 /**
@@ -99,24 +101,40 @@ export async function getCommitMessages(git: SimpleGit, from: string, to: string
 
   return messages.map((commit) => commit.body.trimEnd()) // Trim trailing whitespace because the body always somehow ends with a \n
 }
+
 /**
- * Create a new release branch from a given reference and tag it.
+ * Create a new release branch from trunk and tag it.
  *
  * @param {SimpleGit} git - An instance of SimpleGit to interact with the Git repository.
- * @param {string} ref - The reference (e.g., commit hash or branch name) to create the release branch from.
+ * @param {string} trunkRef - The reference for trunk.
  * @param {string} releaseBranchName - The name of the new release branch to create.
  * @param {string} tag - The tag to apply to the new release branch.
  *
  * @return {Promise<void>} - A promise that resolves when the branch is created and tagged.
  */
-export async function cutReleaseBranch(git: SimpleGit, ref: string = 'HEAD', releaseBranchName: string, tag: string): Promise<void> {
+export async function cutReleaseFromTrunk(git: SimpleGit, trunkRef: string, releaseBranchName: string, tag: string): Promise<void> {
   const branches = (await git.branch()).all
 
   if (branches.includes(releaseBranchName)) {
-    throw new Error(`Branch ${releaseBranchName} already exists.`)
+    core.setFailed(`Branch '${releaseBranchName}' already exists.`)
+    throw new Error(`Branch '${releaseBranchName}' already exists.`)
   }
 
-  await git.checkoutBranch(releaseBranchName, ref)
+  await git.checkoutBranch(releaseBranchName, trunkRef)
+  await git.tag([tag])
+}
+
+/**
+ * Create a new release from release branch and tag it.
+ *
+ * @param {SimpleGit} git - An instance of SimpleGit to interact with the Git repository.
+ * @param {string} releaseBranchRef - The reference for the release branch.
+ * @param {string} tag - The tag to apply to the new release.
+ *
+ * @return {Promise<void>} - A promise that resolves when the branch is created and tagged.
+ */
+export async function cutReleaseFromReleaseBranch(git: SimpleGit, releaseBranchRef: string, tag: string): Promise<void> {
+  await git.checkout(releaseBranchRef)
   await git.tag([tag])
 }
 

@@ -2,7 +2,17 @@ import { describe, it, expect } from '@jest/globals'
 import { SimpleGit, simpleGit } from 'simple-git'
 import fs from 'fs'
 import('process')
-import { getTags, getLatestTag, getLatestStableTag, getTagsAtHEAD, getCurrentBranch, getCommitMessages, makeRelease } from '../src/git'
+import {
+  getTags,
+  getLatestTag,
+  getLatestStableTag,
+  getTagsAtHEAD,
+  getCurrentBranch,
+  getCommitMessages,
+  cutReleaseFromTrunk,
+  cutReleaseFromReleaseBranch,
+  makeRelease
+} from '../src/git'
 import { SIMPLE_GIT_CONFIG } from '../src/constants'
 
 const dir = process.cwd() + '/test-repo'
@@ -498,6 +508,97 @@ describe('Get Commit Messages', () => {
 
     const messages = await getCommitMessages(git, 'v1.0.0', 'v1.0.0')
     expect(messages.length).toBe(0)
+  })
+})
+
+describe('Cut Release From Trunk', () => {
+  beforeEach(async () => {
+    await initGitRepo(dir)
+  })
+
+  afterEach(() => {
+    cleanupGitRepo(dir)
+  })
+
+  it('should cut a release branch from main', async () => {
+    /*
+     * v1.0.0-rc.1 -> . (main)
+     *                    \-> (cut release here) (release-1.1.x)
+     */
+    const git: SimpleGit = simpleGit(dir, SIMPLE_GIT_CONFIG)
+
+    await git.commit('Initial commit', { '--allow-empty': null })
+    await git.tag(['v1.0.0-rc.1'])
+
+    await git.commit('Update to v1.1.0-rc.1', {
+      '--allow-empty': null
+    })
+
+    await cutReleaseFromTrunk(git, 'main', 'release-1.1.x', 'v1.1.0-rc.1')
+
+    const tags = await git.tags({ '--points-at': 'HEAD' })
+    const branches = await git.branch()
+
+    expect(tags.all.includes('v1.1.0-rc.1')).toBe(true)
+    expect(branches.current).toBe('release-1.1.x')
+  })
+
+  it('should fail to cut a release branch if it already exists', async () => {
+    /*
+     * v1.0.0-rc.1 -> . (main)
+     *                    \-> (release-1.1.x already exists)
+     */
+    const git: SimpleGit = simpleGit(dir, SIMPLE_GIT_CONFIG)
+
+    await git.commit('Initial commit', { '--allow-empty': null })
+    await git.tag(['v1.0.0-rc.1'])
+
+    await git.commit('Update to v1.1.0-rc.1', {
+      '--allow-empty': null
+    })
+
+    await git.checkoutBranch('release-1.1.x', 'main')
+
+    await expect(cutReleaseFromTrunk(git, 'main', 'release-1.1.x', 'v1.1.0-rc.1')).rejects.toThrow(`Branch 'release-1.1.x' already exists.`)
+  })
+})
+
+describe('Cut Release From Release Branch', () => {
+  beforeEach(async () => {
+    await initGitRepo(dir)
+  })
+
+  afterEach(() => {
+    cleanupGitRepo(dir)
+  })
+
+  it('should cut a release branch from another release branch', async () => {
+    /*
+     * v1.0.0-rc.1 -> v1.1.0-rc.1 (main)
+     *                    \-> . (cut release here) (release-1.1.x)
+     */
+    const git: SimpleGit = simpleGit(dir, SIMPLE_GIT_CONFIG)
+
+    await git.commit('Initial commit', { '--allow-empty': null })
+    await git.tag(['v1.0.0-rc.1'])
+
+    await git.commit('Update to v1.1.0-rc.1', {
+      '--allow-empty': null
+    })
+    await git.checkoutBranch('release-1.1.x', 'main')
+    await git.tag(['v1.1.0-rc.1'])
+
+    await git.commit('Update to v1.1.0-rc.2', {
+      '--allow-empty': null
+    })
+
+    await cutReleaseFromReleaseBranch(git, 'release-1.1.x', 'v1.1.0-rc.2')
+
+    const tags = await git.tags({ '--points-at': 'HEAD' })
+    const branches = await git.branch()
+
+    expect(tags.all.includes('v1.1.0-rc.2')).toBe(true)
+    expect(branches.current).toBe('release-1.1.x')
   })
 })
 

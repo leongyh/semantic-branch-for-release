@@ -563,6 +563,49 @@ describe('Test release-cut action', () => {
     expect(core.setOutput).toHaveBeenCalledWith('previous-stable-version', 'v1.0.0')
   })
 
+  test('make valid release branch release cut complex repo 1', async () => {
+    /*
+     *                      /->  . [make release-cut v0.1.1-rc.1] (release-0.1.x)
+     * . -> . -> v0.1.0-rc.1, v0.1.0 -> v0.2.0-rc.1 (main)
+     */
+    const git: SimpleGit = simpleGit(dir, SIMPLE_GIT_CONFIG)
+
+    await git.commit('Initial commit', { '--allow-empty': null })
+    await git.commit('not a conventional commit message: hello', {
+      '--allow-empty': null
+    })
+
+    await git.commit('feat(my-scope): world', {
+      '--allow-empty': null
+    })
+    await git.tag(['v0.1.0-rc.1'])
+    await git.tag(['v0.1.0'])
+
+    await git.checkout(['-b', 'release-0.1.x'])
+    await git.commit('fix: some chore', {
+      '--allow-empty': null
+    })
+
+    await git.checkout('main')
+    await git.commit('feat: update readme', {
+      '--allow-empty': null
+    })
+    await git.tag(['v0.2.0-rc.1'])
+
+    await git.checkout('release-0.1.x')
+
+    await run(git)
+
+    const tags = await git.tags({ '--points-at': 'HEAD' })
+    const currentBranch = await git.branch()
+
+    expect(tags.all.includes('v0.1.1-rc.1')).toBe(true)
+    expect(currentBranch.current).toBe('release-0.1.x')
+    expect(core.setOutput).toHaveBeenCalledWith('next-version', 'v0.1.1-rc.1')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-version', 'v0.1.0')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-stable-version', 'v0.1.0')
+  })
+
   test('make release cut with some non-conventional commits', async () => {
     const git: SimpleGit = simpleGit(dir, SIMPLE_GIT_CONFIG)
 

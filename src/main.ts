@@ -7,7 +7,8 @@ import {
   getTagsAtHEAD,
   getCurrentBranch,
   getCommitMessages,
-  cutReleaseBranch,
+  cutReleaseFromTrunk,
+  cutReleaseFromReleaseBranch,
   makeRelease,
   gitSync
 } from './git.ts'
@@ -137,7 +138,18 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
       )
     }
 
-    const latestTag: string = await getLatestTag(git, trunkBranchName)
+    let branchType: string = ''
+
+    // Get branch type (trunk or release)
+    if (currentBranch === trunkBranchName) {
+      branchType = 'trunk'
+    } else if (isReleaseBranch(currentBranch, releaseBranchRegex)) {
+      branchType = 'release'
+    }
+
+    core.info(`Operating on current branch '${currentBranch}', identified as type '${branchType}' branch.`)
+
+    const latestTag: string = await getLatestTag(git, currentBranch)
     let version: SemanticVersion
     let commitMessages: string[]
 
@@ -156,6 +168,8 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
       version = new SemanticVersion('0.0.0')
       commitMessages = await getCommitMessages(git, await git.firstCommit(), 'HEAD')
       previousVersion = ''
+
+      core.info('No existing tags found in the repository. Starting from initial version v0.0.0.')
 
       // Validate that there are commit messages in the repository
       if (commitMessages.length === 0) {
@@ -184,7 +198,6 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
       }
 
       version.bumpPatch()
-      await git.tag([version.toString()])
     } else if (releaseType === RELEASE_TYPES.MINOR) {
       // Validate that the current branch is the trunk branch for minor releases
       if (currentBranch !== trunkBranchName) {
@@ -193,9 +206,6 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
       }
 
       version.bumpMinor()
-      const branchCutName = generateReleaseBranchName(releaseBranchStringTemplate, version)
-
-      await cutReleaseBranch(git, trunkBranchName, branchCutName, version.toString())
     } else if (releaseType === RELEASE_TYPES.MAJOR) {
       // Validate that the current branch is the trunk branch for major releases
       if (currentBranch !== trunkBranchName) {
@@ -204,9 +214,14 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
       }
 
       version.bumpMajor()
+    }
+
+    if (branchType === 'trunk') {
       const branchCutName = generateReleaseBranchName(releaseBranchStringTemplate, version)
 
-      await cutReleaseBranch(git, trunkBranchName, branchCutName, version.toString())
+      await cutReleaseFromTrunk(git, currentBranch, branchCutName, version.toString())
+    } else if (branchType === 'release') {
+      await cutReleaseFromReleaseBranch(git, currentBranch, version.toString())
     }
 
     nextVersion = version.toString()

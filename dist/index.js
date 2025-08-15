@@ -33386,21 +33386,35 @@ async function getCommitMessages(git, from, to) {
     return messages.map((commit) => commit.body.trimEnd()); // Trim trailing whitespace because the body always somehow ends with a \n
 }
 /**
- * Create a new release branch from a given reference and tag it.
+ * Create a new release branch from trunk and tag it.
  *
  * @param {SimpleGit} git - An instance of SimpleGit to interact with the Git repository.
- * @param {string} ref - The reference (e.g., commit hash or branch name) to create the release branch from.
+ * @param {string} trunkRef - The reference for trunk.
  * @param {string} releaseBranchName - The name of the new release branch to create.
  * @param {string} tag - The tag to apply to the new release branch.
  *
  * @return {Promise<void>} - A promise that resolves when the branch is created and tagged.
  */
-async function cutReleaseBranch(git, ref = 'HEAD', releaseBranchName, tag) {
+async function cutReleaseFromTrunk(git, trunkRef, releaseBranchName, tag) {
     const branches = (await git.branch()).all;
     if (branches.includes(releaseBranchName)) {
-        throw new Error(`Branch ${releaseBranchName} already exists.`);
+        coreExports.setFailed(`Branch '${releaseBranchName}' already exists.`);
+        throw new Error(`Branch '${releaseBranchName}' already exists.`);
     }
-    await git.checkoutBranch(releaseBranchName, ref);
+    await git.checkoutBranch(releaseBranchName, trunkRef);
+    await git.tag([tag]);
+}
+/**
+ * Create a new release from release branch and tag it.
+ *
+ * @param {SimpleGit} git - An instance of SimpleGit to interact with the Git repository.
+ * @param {string} releaseBranchRef - The reference for the release branch.
+ * @param {string} tag - The tag to apply to the new release.
+ *
+ * @return {Promise<void>} - A promise that resolves when the branch is created and tagged.
+ */
+async function cutReleaseFromReleaseBranch(git, releaseBranchRef, tag) {
+    await git.checkout(releaseBranchRef);
     await git.tag([tag]);
 }
 /**
@@ -33524,7 +33538,16 @@ async function run(gitObj = undefined) {
             coreExports.setFailed(`Current branch '${currentBranch}' is not the trunk branch '${trunkBranchName}' or a release branch. Release cuts can only be made from the trunk branch or a release branch.`);
             throw new Error(`Current branch '${currentBranch}' is not the trunk branch '${trunkBranchName}' or a release branch. Release cuts can only be made from the trunk branch or a release branch.`);
         }
-        const latestTag = await getLatestTag(git, trunkBranchName);
+        let branchType = '';
+        // Get branch type (trunk or release)
+        if (currentBranch === trunkBranchName) {
+            branchType = 'trunk';
+        }
+        else if (isReleaseBranch(currentBranch, releaseBranchRegex)) {
+            branchType = 'release';
+        }
+        coreExports.info(`Operating on current branch '${currentBranch}', identified as type '${branchType}' branch.`);
+        const latestTag = await getLatestTag(git, currentBranch);
         let version;
         let commitMessages;
         if (latestTag) {
@@ -33542,6 +33565,7 @@ async function run(gitObj = undefined) {
             version = new SemanticVersion('0.0.0');
             commitMessages = await getCommitMessages(git, await git.firstCommit(), 'HEAD');
             previousVersion = '';
+            coreExports.info('No existing tags found in the repository. Starting from initial version v0.0.0.');
             // Validate that there are commit messages in the repository
             if (commitMessages.length === 0) {
                 coreExports.setFailed('No commits found in the repository. Cannot determine next version bump.');
@@ -33562,7 +33586,6 @@ async function run(gitObj = undefined) {
                 throw new Error(`Cannot make a patch release from the trunk branch '${trunkBranchName}'. Use a release branch for patch releases.`);
             }
             version.bumpPatch();
-            await git.tag([version.toString()]);
         }
         else if (releaseType === RELEASE_TYPES.MINOR) {
             // Validate that the current branch is the trunk branch for minor releases
@@ -33571,8 +33594,6 @@ async function run(gitObj = undefined) {
                 throw new Error(`Minor releases can only be made from the trunk branch '${trunkBranchName}'. Use the trunk branch for minor releases.`);
             }
             version.bumpMinor();
-            const branchCutName = generateReleaseBranchName(releaseBranchStringTemplate, version);
-            await cutReleaseBranch(git, trunkBranchName, branchCutName, version.toString());
         }
         else if (releaseType === RELEASE_TYPES.MAJOR) {
             // Validate that the current branch is the trunk branch for major releases
@@ -33581,8 +33602,13 @@ async function run(gitObj = undefined) {
                 throw new Error(`Major releases can only be made from the trunk branch '${trunkBranchName}'. Use the trunk branch for major releases.`);
             }
             version.bumpMajor();
+        }
+        if (branchType === 'trunk') {
             const branchCutName = generateReleaseBranchName(releaseBranchStringTemplate, version);
-            await cutReleaseBranch(git, trunkBranchName, branchCutName, version.toString());
+            await cutReleaseFromTrunk(git, currentBranch, branchCutName, version.toString());
+        }
+        else if (branchType === 'release') {
+            await cutReleaseFromReleaseBranch(git, currentBranch, version.toString());
         }
         nextVersion = version.toString();
     }
