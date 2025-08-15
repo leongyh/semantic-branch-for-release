@@ -129,6 +129,7 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
     if (latestTag) {
       version = new SemanticVersion(latestTag)
       commitMessages = await getCommitMessages(git, latestTag, 'HEAD')
+      previousVersion = version.toString()
 
       // Validate that there are commit messages since the latest tag
       if (commitMessages.length === 0) {
@@ -138,12 +139,15 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
       // If no tags exist, start from v0.0.0
       version = new SemanticVersion('0.0.0')
       commitMessages = await getCommitMessages(git, await git.firstCommit(), 'HEAD')
+      previousVersion = ''
 
       // Validate that there are commit messages in the repository
       if (commitMessages.length === 0) {
         throw new Error('No commits found in the repository. Cannot determine next version bump.')
       }
     }
+
+    previousStableVersion = await getLatestStableTag(git, currentBranch)
 
     // Determine the release type based on commit messages
     const releaseType: RELEASE_TYPES = releaseTypeFromCommitMessages(commitMessages)
@@ -181,6 +185,8 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
 
       await cutReleaseBranch(git, trunkBranchName, branchCutName, version.toString())
     }
+
+    nextVersion = version.toString()
   }
 
   if (!dryRun) {

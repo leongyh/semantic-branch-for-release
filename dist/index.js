@@ -33523,6 +33523,7 @@ async function run(gitObj = undefined) {
         if (latestTag) {
             version = new SemanticVersion(latestTag);
             commitMessages = await getCommitMessages(git, latestTag, 'HEAD');
+            previousVersion = version.toString();
             // Validate that there are commit messages since the latest tag
             if (commitMessages.length === 0) {
                 throw new Error(`No commits found since latest tag ${latestTag}. Cannot determine next version bump.`);
@@ -33532,11 +33533,13 @@ async function run(gitObj = undefined) {
             // If no tags exist, start from v0.0.0
             version = new SemanticVersion('0.0.0');
             commitMessages = await getCommitMessages(git, await git.firstCommit(), 'HEAD');
+            previousVersion = '';
             // Validate that there are commit messages in the repository
             if (commitMessages.length === 0) {
                 throw new Error('No commits found in the repository. Cannot determine next version bump.');
             }
         }
+        previousStableVersion = await getLatestStableTag(git, currentBranch);
         // Determine the release type based on commit messages
         const releaseType = releaseTypeFromCommitMessages(commitMessages);
         if (releaseType === RELEASE_TYPES.NONE) {
@@ -33568,6 +33571,7 @@ async function run(gitObj = undefined) {
             const branchCutName = generateReleaseBranchName(releaseBranchStringTemplate, version);
             await cutReleaseBranch(git, trunkBranchName, branchCutName, version.toString());
         }
+        nextVersion = version.toString();
     }
     if (!dryRun) {
         await gitSync(git);

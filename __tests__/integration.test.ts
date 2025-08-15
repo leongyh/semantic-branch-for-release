@@ -362,6 +362,9 @@ describe('Test release-cut action', () => {
 
     expect(tags.all.includes('v1.0.0-rc.1')).toBe(true)
     expect(currentBranch.current).toBe('release-1.0.x')
+    expect(core.setOutput).toHaveBeenCalledWith('next-version', 'v1.0.0-rc.1')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-version', '')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-stable-version', '')
   })
 
   test('make minor cut on new repository', async () => {
@@ -385,6 +388,9 @@ describe('Test release-cut action', () => {
 
     expect(tags.all.includes('v0.1.0-rc.1')).toBe(true)
     expect(currentBranch.current).toBe('release-0.1.x')
+    expect(core.setOutput).toHaveBeenCalledWith('next-version', 'v0.1.0-rc.1')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-version', '')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-stable-version', '')
   })
 
   test('make major cut on trunk', async () => {
@@ -409,6 +415,9 @@ describe('Test release-cut action', () => {
 
     expect(tags.all.includes('v2.0.0-rc.1')).toBe(true)
     expect(currentBranch.current).toBe('release-2.0.x')
+    expect(core.setOutput).toHaveBeenCalledWith('next-version', 'v2.0.0-rc.1')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-version', 'v1.0.0')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-stable-version', 'v1.0.0')
   })
 
   test('make minor cut on trunk', async () => {
@@ -432,6 +441,9 @@ describe('Test release-cut action', () => {
 
     expect(tags.all.includes('v1.1.0-rc.1')).toBe(true)
     expect(currentBranch.current).toBe('release-1.1.x')
+    expect(core.setOutput).toHaveBeenCalledWith('next-version', 'v1.1.0-rc.1')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-version', 'v1.0.0')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-stable-version', 'v1.0.0')
   })
 
   test('make patch cut on trunk', async () => {
@@ -512,6 +524,9 @@ describe('Test release-cut action', () => {
 
     expect(tags.all.includes('v1.0.0-rc.2')).toBe(true)
     expect(currentBranch.current).toBe('release-1.0.x')
+    expect(core.setOutput).toHaveBeenCalledWith('next-version', 'v1.0.0-rc.2')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-version', 'v1.0.0-rc.1')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-stable-version', '')
   })
 
   test('make valid trunk release cut complex repo 1', async () => {
@@ -522,6 +537,7 @@ describe('Test release-cut action', () => {
 
     await git.commit('Initial commit', { '--allow-empty': null })
     await git.tag(['v1.0.0-rc.1'])
+    await git.tag(['v1.0.0'])
 
     await git.commit('fix(my-scope): hello', {
       '--allow-empty': null
@@ -542,6 +558,9 @@ describe('Test release-cut action', () => {
 
     expect(tags.all.includes('v1.1.0-rc.1')).toBe(true)
     expect(currentBranch.current).toBe('release-1.1.x')
+    expect(core.setOutput).toHaveBeenCalledWith('next-version', 'v1.1.0-rc.1')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-version', 'v1.0.0')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-stable-version', 'v1.0.0')
   })
 
   test('make release cut with some non-conventional commits', async () => {
@@ -564,5 +583,8 @@ describe('Test release-cut action', () => {
 
     expect(tags.all.includes('v1.1.0-rc.1')).toBe(true)
     expect(currentBranch.current).toBe('release-1.1.x')
+    expect(core.setOutput).toHaveBeenCalledWith('next-version', 'v1.1.0-rc.1')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-version', 'v1.0.0-rc.1')
+    expect(core.setOutput).toHaveBeenCalledWith('previous-stable-version', '')
   })
 })
