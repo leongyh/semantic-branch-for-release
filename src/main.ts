@@ -48,6 +48,7 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
 
     // Validate that the current branch is a release branch
     if (!isReleaseBranch(currentBranch, releaseBranchRegex)) {
+      core.setFailed(`Current branch '${currentBranch}' is not a release branch. Releases can only be made from a release branch.`)
       throw new Error(`Current branch '${currentBranch}' is not a release branch. Releases can only be made from a release branch.`)
     }
 
@@ -55,6 +56,9 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
 
     // Validate that there is at least one tag at HEAD of the release branch
     if (tagsAtHEAD.length === 0) {
+      core.setFailed(
+        `No tags found at HEAD of release branch. Cannot make a release without a tag at HEAD. There might be commit(s) on the release branch that have not made it to 'rc'. Try running 'release-cut' action first.`
+      )
       throw new Error(
         `No tags found at HEAD of release branch. Cannot make a release without a tag at HEAD. There might be commit(s) on the release branch that have not made it to 'rc'. Try running 'release-cut' action first.`
       )
@@ -72,10 +76,14 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
 
     // Validate that there is exactly one release candidate tag at HEAD of the release branch
     if (numReleaseCandidatesAtHEAD === 0) {
+      core.setFailed(`No release candidate tags found at HEAD of release branch. Cannot make a release without a release candidate tag.`)
       throw new Error(`No release candidate tags found at HEAD of release branch. Cannot make a release without a release candidate tag.`)
     } else if (numReleaseCandidatesAtHEAD > 1) {
+      core.setFailed(
+        `Multiple release candidate tags found at HEAD of release branch: '${tagsAtHEAD.join(', ')}'. There should be only one release candidate tag at HEAD of a release branch.`
+      )
       throw new Error(
-        `Multiple release candidate tags found at HEAD of release branch: ${tagsAtHEAD.join(', ')}. There should be only one release candidate tag at HEAD of a release branch.`
+        `Multiple release candidate tags found at HEAD of release branch: '${tagsAtHEAD.join(', ')}'. There should be only one release candidate tag at HEAD of a release branch.`
       )
     }
 
@@ -91,7 +99,8 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
 
     // Validate that there are no existing release tags at HEAD of the release branch
     if (numReleasesAtHEAD > 0) {
-      throw new Error(`Release tag(s) found at HEAD of release branch: ${tagsAtHEAD.join(', ')}. A release has already been made from this commit.`)
+      core.setFailed(`Release tag(s) found at HEAD of release branch: '${tagsAtHEAD.join(', ')}'. A release has already been made from this commit.`)
+      throw new Error(`Release tag(s) found at HEAD of release branch: '${tagsAtHEAD.join(', ')}'. A release has already been made from this commit.`)
     }
 
     const targetTag: string[] = tagsAtHEAD.filter((tag: string) => {
@@ -120,7 +129,9 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
     // Validate that the current branch is the trunk branch or a release branch.
     // If NOT a trunk branch and NOT a release branch, throw an error.
     if (currentBranch !== trunkBranchName && !isReleaseBranch(currentBranch, releaseBranchRegex)) {
-      console.log(currentBranch !== trunkBranchName)
+      core.setFailed(
+        `Current branch '${currentBranch}' is not the trunk branch '${trunkBranchName}' or a release branch. Release cuts can only be made from the trunk branch or a release branch.`
+      )
       throw new Error(
         `Current branch '${currentBranch}' is not the trunk branch '${trunkBranchName}' or a release branch. Release cuts can only be made from the trunk branch or a release branch.`
       )
@@ -137,7 +148,8 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
 
       // Validate that there are commit messages since the latest tag
       if (commitMessages.length === 0) {
-        throw new Error(`No commits found since latest tag ${latestTag}. Cannot determine next version bump.`)
+        core.setFailed(`No commits found since latest tag '${latestTag}'. Cannot determine next version bump.`)
+        throw new Error(`No commits found since latest tag '${latestTag}'. Cannot determine next version bump.`)
       }
     } else {
       // If no tags exist, start from v0.0.0
@@ -147,6 +159,7 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
 
       // Validate that there are commit messages in the repository
       if (commitMessages.length === 0) {
+        core.setFailed('No commits found in the repository. Cannot determine next version bump.')
         throw new Error('No commits found in the repository. Cannot determine next version bump.')
       }
     }
@@ -157,12 +170,16 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
     const releaseType: RELEASE_TYPES = releaseTypeFromCommitMessages(commitMessages)
 
     if (releaseType === RELEASE_TYPES.NONE) {
+      core.setFailed(
+        `No valid changes found found since latest tag '${latestTag}' that warrants a version bump. Changes must warrant at least a patch.`
+      )
       throw new Error(
-        `No valid changes found found since latest tag ${latestTag} that warrants a version bump. Changes must warrant at least a patch.`
+        `No valid changes found found since latest tag '${latestTag}' that warrants a version bump. Changes must warrant at least a patch.`
       )
     } else if (releaseType === RELEASE_TYPES.PATCH) {
       // Validate that the current branch is not the trunk branch for patch releases
       if (currentBranch === trunkBranchName) {
+        core.setFailed(`Cannot make a patch release from the trunk branch '${trunkBranchName}'. Use a release branch for patch releases.`)
         throw new Error(`Cannot make a patch release from the trunk branch '${trunkBranchName}'. Use a release branch for patch releases.`)
       }
 
@@ -171,6 +188,7 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
     } else if (releaseType === RELEASE_TYPES.MINOR) {
       // Validate that the current branch is the trunk branch for minor releases
       if (currentBranch !== trunkBranchName) {
+        core.setFailed(`Minor releases can only be made from the trunk branch '${trunkBranchName}'. Use the trunk branch for minor releases.`)
         throw new Error(`Minor releases can only be made from the trunk branch '${trunkBranchName}'. Use the trunk branch for minor releases.`)
       }
 
@@ -181,6 +199,7 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
     } else if (releaseType === RELEASE_TYPES.MAJOR) {
       // Validate that the current branch is the trunk branch for major releases
       if (currentBranch !== trunkBranchName) {
+        core.setFailed(`Major releases can only be made from the trunk branch '${trunkBranchName}'. Use the trunk branch for major releases.`)
         throw new Error(`Major releases can only be made from the trunk branch '${trunkBranchName}'. Use the trunk branch for major releases.`)
       }
 

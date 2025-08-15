@@ -33457,11 +33457,13 @@ async function run(gitObj = undefined) {
         coreExports.info(`Making a release from branch '${currentBranch}'...`);
         // Validate that the current branch is a release branch
         if (!isReleaseBranch(currentBranch, releaseBranchRegex)) {
+            coreExports.setFailed(`Current branch '${currentBranch}' is not a release branch. Releases can only be made from a release branch.`);
             throw new Error(`Current branch '${currentBranch}' is not a release branch. Releases can only be made from a release branch.`);
         }
         const tagsAtHEAD = await getTagsAtHEAD(git);
         // Validate that there is at least one tag at HEAD of the release branch
         if (tagsAtHEAD.length === 0) {
+            coreExports.setFailed(`No tags found at HEAD of release branch. Cannot make a release without a tag at HEAD. There might be commit(s) on the release branch that have not made it to 'rc'. Try running 'release-cut' action first.`);
             throw new Error(`No tags found at HEAD of release branch. Cannot make a release without a tag at HEAD. There might be commit(s) on the release branch that have not made it to 'rc'. Try running 'release-cut' action first.`);
         }
         const numReleaseCandidatesAtHEAD = tagsAtHEAD
@@ -33476,10 +33478,12 @@ async function run(gitObj = undefined) {
             .filter(Boolean).length;
         // Validate that there is exactly one release candidate tag at HEAD of the release branch
         if (numReleaseCandidatesAtHEAD === 0) {
+            coreExports.setFailed(`No release candidate tags found at HEAD of release branch. Cannot make a release without a release candidate tag.`);
             throw new Error(`No release candidate tags found at HEAD of release branch. Cannot make a release without a release candidate tag.`);
         }
         else if (numReleaseCandidatesAtHEAD > 1) {
-            throw new Error(`Multiple release candidate tags found at HEAD of release branch: ${tagsAtHEAD.join(', ')}. There should be only one release candidate tag at HEAD of a release branch.`);
+            coreExports.setFailed(`Multiple release candidate tags found at HEAD of release branch: '${tagsAtHEAD.join(', ')}'. There should be only one release candidate tag at HEAD of a release branch.`);
+            throw new Error(`Multiple release candidate tags found at HEAD of release branch: '${tagsAtHEAD.join(', ')}'. There should be only one release candidate tag at HEAD of a release branch.`);
         }
         const numReleasesAtHEAD = tagsAtHEAD
             .map((tag) => {
@@ -33493,7 +33497,8 @@ async function run(gitObj = undefined) {
             .filter(Boolean).length;
         // Validate that there are no existing release tags at HEAD of the release branch
         if (numReleasesAtHEAD > 0) {
-            throw new Error(`Release tag(s) found at HEAD of release branch: ${tagsAtHEAD.join(', ')}. A release has already been made from this commit.`);
+            coreExports.setFailed(`Release tag(s) found at HEAD of release branch: '${tagsAtHEAD.join(', ')}'. A release has already been made from this commit.`);
+            throw new Error(`Release tag(s) found at HEAD of release branch: '${tagsAtHEAD.join(', ')}'. A release has already been made from this commit.`);
         }
         const targetTag = tagsAtHEAD.filter((tag) => {
             try {
@@ -33516,7 +33521,7 @@ async function run(gitObj = undefined) {
         // Validate that the current branch is the trunk branch or a release branch.
         // If NOT a trunk branch and NOT a release branch, throw an error.
         if (currentBranch !== trunkBranchName && !isReleaseBranch(currentBranch, releaseBranchRegex)) {
-            console.log(currentBranch !== trunkBranchName);
+            coreExports.setFailed(`Current branch '${currentBranch}' is not the trunk branch '${trunkBranchName}' or a release branch. Release cuts can only be made from the trunk branch or a release branch.`);
             throw new Error(`Current branch '${currentBranch}' is not the trunk branch '${trunkBranchName}' or a release branch. Release cuts can only be made from the trunk branch or a release branch.`);
         }
         const latestTag = await getLatestTag(git, trunkBranchName);
@@ -33528,7 +33533,8 @@ async function run(gitObj = undefined) {
             previousVersion = version.toString();
             // Validate that there are commit messages since the latest tag
             if (commitMessages.length === 0) {
-                throw new Error(`No commits found since latest tag ${latestTag}. Cannot determine next version bump.`);
+                coreExports.setFailed(`No commits found since latest tag '${latestTag}'. Cannot determine next version bump.`);
+                throw new Error(`No commits found since latest tag '${latestTag}'. Cannot determine next version bump.`);
             }
         }
         else {
@@ -33538,6 +33544,7 @@ async function run(gitObj = undefined) {
             previousVersion = '';
             // Validate that there are commit messages in the repository
             if (commitMessages.length === 0) {
+                coreExports.setFailed('No commits found in the repository. Cannot determine next version bump.');
                 throw new Error('No commits found in the repository. Cannot determine next version bump.');
             }
         }
@@ -33545,11 +33552,13 @@ async function run(gitObj = undefined) {
         // Determine the release type based on commit messages
         const releaseType = releaseTypeFromCommitMessages(commitMessages);
         if (releaseType === RELEASE_TYPES.NONE) {
-            throw new Error(`No valid changes found found since latest tag ${latestTag} that warrants a version bump. Changes must warrant at least a patch.`);
+            coreExports.setFailed(`No valid changes found found since latest tag '${latestTag}' that warrants a version bump. Changes must warrant at least a patch.`);
+            throw new Error(`No valid changes found found since latest tag '${latestTag}' that warrants a version bump. Changes must warrant at least a patch.`);
         }
         else if (releaseType === RELEASE_TYPES.PATCH) {
             // Validate that the current branch is not the trunk branch for patch releases
             if (currentBranch === trunkBranchName) {
+                coreExports.setFailed(`Cannot make a patch release from the trunk branch '${trunkBranchName}'. Use a release branch for patch releases.`);
                 throw new Error(`Cannot make a patch release from the trunk branch '${trunkBranchName}'. Use a release branch for patch releases.`);
             }
             version.bumpPatch();
@@ -33558,6 +33567,7 @@ async function run(gitObj = undefined) {
         else if (releaseType === RELEASE_TYPES.MINOR) {
             // Validate that the current branch is the trunk branch for minor releases
             if (currentBranch !== trunkBranchName) {
+                coreExports.setFailed(`Minor releases can only be made from the trunk branch '${trunkBranchName}'. Use the trunk branch for minor releases.`);
                 throw new Error(`Minor releases can only be made from the trunk branch '${trunkBranchName}'. Use the trunk branch for minor releases.`);
             }
             version.bumpMinor();
@@ -33567,6 +33577,7 @@ async function run(gitObj = undefined) {
         else if (releaseType === RELEASE_TYPES.MAJOR) {
             // Validate that the current branch is the trunk branch for major releases
             if (currentBranch !== trunkBranchName) {
+                coreExports.setFailed(`Major releases can only be made from the trunk branch '${trunkBranchName}'. Use the trunk branch for major releases.`);
                 throw new Error(`Major releases can only be made from the trunk branch '${trunkBranchName}'. Use the trunk branch for major releases.`);
             }
             version.bumpMajor();

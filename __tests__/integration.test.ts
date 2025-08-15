@@ -263,7 +263,7 @@ describe('Test release action', () => {
     await git.tag(['v1.1.0-rc.3'])
 
     await expect(async () => await run(git)).rejects.toThrow(
-      `Multiple release candidate tags found at HEAD of release branch: v1.1.0-rc.2, v1.1.0-rc.3. There should be only one release candidate tag at HEAD of a release branch.`
+      `Multiple release candidate tags found at HEAD of release branch: 'v1.1.0-rc.2, v1.1.0-rc.3'. There should be only one release candidate tag at HEAD of a release branch.`
     )
   })
 
@@ -290,7 +290,7 @@ describe('Test release action', () => {
     await git.tag(['v1.1.0'])
 
     await expect(async () => await run(git)).rejects.toThrow(
-      `Release tag(s) found at HEAD of release branch: v1.1.0, v1.1.0-rc.2. A release has already been made from this commit.`
+      `Release tag(s) found at HEAD of release branch: 'v1.1.0, v1.1.0-rc.2'. A release has already been made from this commit.`
     )
   })
 
@@ -586,5 +586,21 @@ describe('Test release-cut action', () => {
     expect(core.setOutput).toHaveBeenCalledWith('next-version', 'v1.1.0-rc.1')
     expect(core.setOutput).toHaveBeenCalledWith('previous-version', 'v1.0.0-rc.1')
     expect(core.setOutput).toHaveBeenCalledWith('previous-stable-version', '')
+  })
+
+  test('make release cut twice on same branch', async () => {
+    const git: SimpleGit = simpleGit(dir, SIMPLE_GIT_CONFIG)
+
+    await git.commit('Initial commit', { '--allow-empty': null })
+    await git.commit('feat(my-scope): hello', { '--allow-empty': null })
+
+    await run(git)
+
+    await git.commit('feat(my-scope): world', { '--allow-empty': null })
+    await git.checkout('release-0.1.x')
+
+    await expect(async () => run(git)).rejects.toThrow(
+      `Minor releases can only be made from the trunk branch 'main'. Use the trunk branch for minor releases.`
+    )
   })
 })
