@@ -33454,6 +33454,7 @@ async function run(gitObj = undefined) {
     let previousStableVersion;
     // Do 'release' action
     if (action === 'release') {
+        coreExports.info(`Making a release from branch '${currentBranch}'...`);
         // Validate that the current branch is a release branch
         if (!isReleaseBranch(currentBranch, releaseBranchRegex)) {
             throw new Error(`Current branch '${currentBranch}' is not a release branch. Releases can only be made from a release branch.`);
@@ -33511,6 +33512,7 @@ async function run(gitObj = undefined) {
     }
     // Do 'release-cut' action
     else if (action === 'release-cut') {
+        coreExports.info(`Cutting a release from branch '${currentBranch}'...`);
         // Validate that the current branch is the trunk branch or a release branch.
         // If NOT a trunk branch and NOT a release branch, throw an error.
         if (currentBranch !== trunkBranchName && !isReleaseBranch(currentBranch, releaseBranchRegex)) {
@@ -33574,6 +33576,7 @@ async function run(gitObj = undefined) {
         nextVersion = version.toString();
     }
     if (!dryRun) {
+        coreExports.info('Pushing changes to remote...');
         await gitSync(git);
     }
     coreExports.setOutput('next-version', nextVersion);

@@ -44,6 +44,8 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
 
   // Do 'release' action
   if (action === 'release') {
+    core.info(`Making a release from branch '${currentBranch}'...`)
+
     // Validate that the current branch is a release branch
     if (!isReleaseBranch(currentBranch, releaseBranchRegex)) {
       throw new Error(`Current branch '${currentBranch}' is not a release branch. Releases can only be made from a release branch.`)
@@ -113,6 +115,8 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
 
   // Do 'release-cut' action
   else if (action === 'release-cut') {
+    core.info(`Cutting a release from branch '${currentBranch}'...`)
+
     // Validate that the current branch is the trunk branch or a release branch.
     // If NOT a trunk branch and NOT a release branch, throw an error.
     if (currentBranch !== trunkBranchName && !isReleaseBranch(currentBranch, releaseBranchRegex)) {
@@ -190,6 +194,7 @@ export async function run(gitObj: SimpleGit | undefined = undefined): Promise<vo
   }
 
   if (!dryRun) {
+    core.info('Pushing changes to remote...')
     await gitSync(git)
   }
 
